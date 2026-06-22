@@ -103,12 +103,7 @@
             <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
                 <h2 class="text-lg font-bold mb-4 border-b pb-2">기본정보 입력</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Gemini API Key</label>
-                        <input type="password" id="gemini-key" oninput="saveConfig()"
-                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"
-                            placeholder="AIzaSy...">
-                    </div>
+                    <div class="rounded-md bg-indigo-50 p-3 text-sm text-indigo-800">AI 분석은 서버의 로컬 LLM을 사용합니다. API 키 입력은 필요하지 않습니다.</div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">DART API Key</label>
                         <input type="password" id="dart-key" oninput="saveConfig()"
@@ -487,26 +482,22 @@
 
         // Configuration
         function saveConfig() {
-            localStorage.setItem('geminiKey', document.getElementById('gemini-key').value);
             localStorage.setItem('dartKey', document.getElementById('dart-key').value);
         }
 
         window.onload = function () {
-            const gk = localStorage.getItem('geminiKey');
             const dk = localStorage.getItem('dartKey');
-            if (gk) document.getElementById('gemini-key').value = gk;
             if (dk) document.getElementById('dart-key').value = dk;
         }
 
         function getKeys() {
-            const gk = document.getElementById('gemini-key').value.trim();
             const dk = document.getElementById('dart-key').value.trim();
-            if (!gk || !dk) {
-                alert('0. 기본정보 입력 탭에서 Gemini API Key와 DART API Key를 모두 입력해야 실행할 수 있습니다.');
+            if (!dk) {
+                alert('0. 기본정보 입력 탭에서 DART API Key를 입력해야 실행할 수 있습니다.');
                 switchTab('config');
                 return null;
             }
-            return { gemini: gk, dart: dk };
+            return { dart: dk };
         }
 
         async function updateFinancials() {
@@ -622,7 +613,7 @@
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: promptText, type: type, gemini_key: keys.gemini })
+                    body: JSON.stringify({ prompt: promptText, type: type })
                 });
 
                 if (!response.ok) {
@@ -677,7 +668,7 @@
                 const parseRes = await fetch('/fast_backtest_parse', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text, gemini_key: keys.gemini })
+                    body: JSON.stringify({ text: text })
                 });
                 const parseData = await parseRes.json();
 
@@ -906,7 +897,6 @@
                         mc_period_str: mcPeriod,
                         portfolio_strategy: portfolioStrategy,
                         use_tax_fee: useTaxFee,
-                        gemini_key: keys.gemini,
                         dart_key: keys.dart
                     })
                 });

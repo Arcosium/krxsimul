@@ -6,14 +6,13 @@ import time
 import base64
 import socket
 import threading
+import urllib.request
 from datetime import datetime
 
 import pytz
 import pandas as pd
 from flask import Flask, request, jsonify, render_template, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
-from google import genai
-from google.genai import types
 
 from quant_logic import QuantLogic
 import matplotlib.pyplot as plt
@@ -22,6 +21,20 @@ matplotlib.use('Agg')
 
 app = Flask(__name__)
 CORS(app)
+
+LOCAL_LLM_MODEL = os.environ.get("LOCAL_LLM_MODEL", "Qwen3.6-35B-A3B-Uncensored-Claude-Genesis-Q8_0.gguf")
+
+def local_llm_completion(prompt, *, json_mode=False):
+    """Call an OpenAI-compatible local server without credentials."""
+    base_url = os.environ.get("LOCAL_LLM_BASE_URL", "").rstrip("/")
+    if not base_url:
+        raise RuntimeError("LOCAL_LLM_BASE_URL is not configured")
+    payload = {"model": LOCAL_LLM_MODEL, "messages": [{"role": "user", "content": prompt}]}
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
+    req = urllib.request.Request(base_url + "/chat/completions", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as response:
+        return json.loads(response.read())["choices"][0]["message"]["content"]
 
 # 진행률 공유 상태 — 백테스트/재무업데이트 양쪽에서 쓰던 복붙 3종 세트
 # (state dict + update_* + get_*)를 스레드세이프 클래스 하나로 통합.
@@ -188,7 +201,6 @@ def run_backtest():
     mc_period_str = data.get('mc_period_str', '안함')
     portfolio_strategy = data.get('portfolio_strategy', 'equal_weight')
     use_tax_fee = data.get('use_tax_fee', False)
-    gemini_key = data.get('gemini_key', '')
     dart_key = data.get('dart_key', '')
     
     progress_tracker.reset("running")
@@ -247,16 +259,11 @@ def run_backtest():
             {mc_text}
             """
             
-            if gemini_key:
-                client = genai.Client(api_key=gemini_key)
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[prompt]
-                )
-                report = re.sub(r'\*\*', '', response.text).strip()
+            if os.environ.get('LOCAL_LLM_BASE_URL'):
+                report = re.sub(r'\*\*', '', local_llm_completion(prompt)).strip()
                 result['ai_report'] = report
             else:
-                result['ai_report'] = "Gemini API Key가 제공되지 않았습니다."
+                result['ai_report'] = "LOCAL_LLM_BASE_URL이 설정되지 않았습니다."
                 
         except Exception as e:
             print("AI 보고서 생성 실패:", e)
@@ -279,17 +286,13 @@ def run_backtest():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/generate', methods=['POST'])
-def generate_logic_with_gemini():
+def generate_logic_with_local_llm():
     data = request.json
     if not data or 'prompt' not in data or 'type' not in data:
         return jsonify({"error": "Missing prompt or type"}), 400
         
     user_prompt = data['prompt']
     target_type = data['type'] 
-    gemini_key = data.get('gemini_key', '')
-    
-    if not gemini_key:
-        return jsonify({"error": "Gemini API Key is missing"}), 400
         
     # Read logic.csv to teach API the rules
     logic_csv_path = os.path.join(os.path.dirname(__file__), 'logic.csv')
@@ -315,21 +318,11 @@ def generate_logic_with_gemini():
 """
 
     try:
-        client = genai.Client(api_key=gemini_key)
-        
         def generate_stream():
             try:
-                # Streaming directly from gemini
-                response = client.models.generate_content_stream(
-                    model='gemini-2.5-flash',
-                    contents=[sys_prompt]
-                )
-                for chunk in response:
-                    if chunk.text:
-                        # Clean backticks if model ignored instruction
-                        cleaned = chunk.text.replace('`', '').replace('python', '').replace('csv', '').strip()
-                        if cleaned:
-                            yield cleaned + " " # append trailing space for continuous feel
+                cleaned = local_llm_completion(sys_prompt).replace('`', '').replace('python', '').replace('csv', '').strip()
+                if cleaned:
+                    yield cleaned
             except Exception as e:
                 yield f"Error: {str(e)}"
 
@@ -342,15 +335,10 @@ def fast_backtest_parse():
     data = request.json
     text = data.get('text', '')
     
-    gemini_key = data.get('gemini_key', '')
     
     if not text:
         return jsonify({"status": "error", "message": "입력 텍스트가 없습니다."}), 400
-    if not gemini_key:
-        return jsonify({"status": "error", "message": "Gemini API Key가 없습니다."}), 400
-
     try:
-        client = genai.Client(api_key=gemini_key)
         sys_prompt = """당신은 사용자 입력을 분석해 백테스팅 조건을 추출하는 퀀트 전략 전문가입니다.
         
         [규칙]
@@ -401,16 +389,10 @@ def fast_backtest_parse():
         }
         """
         
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[sys_prompt + "\n사용자 입력: " + text],
-            config=types.GenerateContentConfig(
-                response_mime_type='application/json',
-            )
-        )
+        res_text = local_llm_completion(sys_prompt + "\n사용자 입력: " + text, json_mode=True)
         
         # Robust parsing
-        res_text = response.text.strip()
+        res_text = res_text.strip()
         try:
             parsed = json.loads(res_text)
         except Exception:
