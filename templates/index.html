@@ -491,12 +491,8 @@
         }
 
         function getKeys() {
+            // 입력란이 비어 있으면 서버에 영구 설정된 DART 키(.env)로 폴백한다.
             const dk = document.getElementById('dart-key').value.trim();
-            if (!dk) {
-                alert('0. 기본정보 입력 탭에서 DART API Key를 입력해야 실행할 수 있습니다.');
-                switchTab('config');
-                return null;
-            }
             return { dart: dk };
         }
 

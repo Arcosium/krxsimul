@@ -9,6 +9,14 @@ import threading
 import urllib.request
 from datetime import datetime
 
+# 통합 .env 에서 LOCAL_LLM_* 등을 프로세스 환경에 주입한다(서비스가 EnvironmentFile을
+# 지정하지 않아도 동작하도록). 미설치/실패 시 조용히 무시하고 기존 환경을 사용한다.
+try:
+    from dotenv import load_dotenv
+    load_dotenv("/home/arcosium/projects/.env")
+except Exception:
+    pass
+
 import pytz
 import pandas as pd
 from flask import Flask, request, jsonify, render_template, send_from_directory, Response, stream_with_context
@@ -22,18 +30,22 @@ matplotlib.use('Agg')
 app = Flask(__name__)
 CORS(app)
 
-LOCAL_LLM_MODEL = os.environ.get("LOCAL_LLM_MODEL", "Qwen3.6-35B-A3B-Uncensored-Claude-Genesis-Q8_0.gguf")
+LOCAL_LLM_MODEL = os.environ.get("LOCAL_LLM_MODEL", "qwen3.6-35b-a3b-uncensored")
 
 def local_llm_completion(prompt, *, json_mode=False):
     """Call an OpenAI-compatible local server without credentials."""
     base_url = os.environ.get("LOCAL_LLM_BASE_URL", "").rstrip("/")
     if not base_url:
         raise RuntimeError("LOCAL_LLM_BASE_URL is not configured")
-    payload = {"model": LOCAL_LLM_MODEL, "messages": [{"role": "user", "content": prompt}]}
+    # 로컬 모델은 추론(reasoning) 모델이라 추론이 max_tokens 예산을 먼저 소진한다.
+    # 예산이 작거나 미지정이면 content가 빈 문자열로 끝나므로(finish_reason=length)
+    # 넉넉한 예산을 명시한다(모델 context 262144 라 안전).
+    payload = {"model": LOCAL_LLM_MODEL, "messages": [{"role": "user", "content": prompt}], "max_tokens": 24000}
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
     req = urllib.request.Request(base_url + "/chat/completions", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=120) as response:
+    # 추론 모델 + 큰 max_tokens 는 응답이 오래 걸린다(수십 초~수분).
+    with urllib.request.urlopen(req, timeout=600) as response:
         return json.loads(response.read())["choices"][0]["message"]["content"]
 
 # 진행률 공유 상태 — 백테스트/재무업데이트 양쪽에서 쓰던 복붙 3종 세트
@@ -201,7 +213,9 @@ def run_backtest():
     mc_period_str = data.get('mc_period_str', '안함')
     portfolio_strategy = data.get('portfolio_strategy', 'equal_weight')
     use_tax_fee = data.get('use_tax_fee', False)
-    dart_key = data.get('dart_key', '')
+    # 요청에 키가 없으면 서버에 영구 설정된 DART 키(통합 .env)로 폴백한다.
+    dart_key = (data.get('dart_key', '') or os.environ.get('DART_API_KEY')
+                or os.environ.get('OPENDART_API_KEY') or '')
     
     progress_tracker.reset("running")
     
@@ -494,7 +508,9 @@ def get_fin_progress():
 @app.route('/update_financials', methods=['POST'])
 def run_update_financials():
     data = request.json
-    dart_key = data.get('dart_api_key', '')
+    # 요청에 키가 없으면 서버에 영구 설정된 DART 키(통합 .env)로 폴백한다.
+    dart_key = (data.get('dart_api_key', '') or os.environ.get('DART_API_KEY')
+                or os.environ.get('OPENDART_API_KEY') or '')
     if not dart_key:
         return jsonify({"status": "error", "message": "DART API 키가 제공되지 않았습니다."}), 400
         
