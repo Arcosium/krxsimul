@@ -31,6 +31,7 @@ app = Flask(__name__)
 CORS(app)
 
 LOCAL_LLM_MODEL = os.environ.get("LOCAL_LLM_MODEL", "qwen3.6-35b-a3b-uncensored")
+OPENDART_API_KEY = "«REDACTED»"
 
 def local_llm_completion(prompt, *, json_mode=False):
     """Call an OpenAI-compatible local server without credentials."""
@@ -213,9 +214,7 @@ def run_backtest():
     mc_period_str = data.get('mc_period_str', '안함')
     portfolio_strategy = data.get('portfolio_strategy', 'equal_weight')
     use_tax_fee = data.get('use_tax_fee', False)
-    # 요청에 키가 없으면 서버에 영구 설정된 DART 키(통합 .env)로 폴백한다.
-    dart_key = (data.get('dart_key', '') or os.environ.get('DART_API_KEY')
-                or os.environ.get('OPENDART_API_KEY') or '')
+    dart_key = OPENDART_API_KEY
     
     progress_tracker.reset("running")
     
@@ -507,13 +506,8 @@ def get_fin_progress():
 
 @app.route('/update_financials', methods=['POST'])
 def run_update_financials():
-    data = request.json
-    # 요청에 키가 없으면 서버에 영구 설정된 DART 키(통합 .env)로 폴백한다.
-    dart_key = (data.get('dart_api_key', '') or os.environ.get('DART_API_KEY')
-                or os.environ.get('OPENDART_API_KEY') or '')
-    if not dart_key:
-        return jsonify({"status": "error", "message": "DART API 키가 제공되지 않았습니다."}), 400
-        
+    dart_key = OPENDART_API_KEY
+
     fin_tracker.reset("updating")
 
     def background_update():

@@ -73,11 +73,8 @@
 
         <!-- Navigation Tabs -->
         <nav class="flex border-b border-gray-200 mb-6 font-medium text-gray-500 overflow-x-auto">
-            <button onclick="switchTab('config')" id="btn-config"
-                class="tab-btn active px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap">0. 기본정보
-                입력</button>
             <button onclick="switchTab('fast')" id="btn-fast"
-                class="tab-btn px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap">1. 빠른
+                class="tab-btn active px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap">1. 빠른
                 백테스팅</button>
             <button onclick="switchTab('filter')" id="btn-filter"
                 class="tab-btn px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap">2. 재무
@@ -98,48 +95,8 @@
             </button>
         </nav>
 
-        <!-- TAB 0: Config -->
-        <section id="tab-config" class="tab-content active transition-opacity duration-300">
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
-                <h2 class="text-lg font-bold mb-4 border-b pb-2">기본정보 입력</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="rounded-md bg-indigo-50 p-3 text-sm text-indigo-800">AI 분석은 서버의 로컬 LLM을 사용합니다. API 키 입력은 필요하지 않습니다.</div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">DART API Key</label>
-                        <input type="password" id="dart-key" oninput="saveConfig()"
-                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"
-                            placeholder="DART API 키를 입력하세요">
-                    </div>
-                </div>
-
-                <div class="border-t pt-6 mt-6">
-                    <h3 class="text-md font-bold mb-3 text-gray-800">재무제표 최신화</h3>
-                    <p class="text-sm text-gray-500 mb-4">현재 저장된 (D-1y_data.csv 등) 데이터의 최신화 여부를 검증하고, 오래된 경우 DART API를
-                        통해 5년치(D-1y ~ D-5y) 재무제표를 갱신합니다.</p>
-                    <button onclick="updateFinancials()" id="btn-update-fin"
-                        class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-sm transition-colors text-sm">
-                        🔄 최신화 확인 및 크롤링 시작
-                    </button>
-
-                    <!-- Update Financials Progress -->
-                    <div id="fin-progress-container"
-                        class="hidden mt-6 bg-gray-50 rounded-lg p-4 border border-gray-100">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-700" id="fin-progress-text">초기화 중...</span>
-                            <span class="text-sm font-medium text-gray-700" id="fin-progress-pct">0%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                            <div id="fin-progress-bar"
-                                class="bg-green-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- TAB 1: Fast Backtest -->
-        <section id="tab-fast" class="tab-content transition-opacity duration-300">
+        <section id="tab-fast" class="tab-content active transition-opacity duration-300">
             <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
                 <h2 class="text-lg font-bold mb-4 border-b pb-2">빠른 백테스팅 (AI 자연어 분석)</h2>
                 <div class="mb-4">
@@ -168,7 +125,27 @@
         <!-- TAB 1: Filter -->
         <section id="tab-filter" class="tab-content transition-opacity duration-300">
             <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
-                <h2 class="text-lg font-bold mb-4 border-b pb-2">재무 지표 기반 종목 필터링</h2>
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 border-b pb-2">
+                    <h2 class="text-lg font-bold">재무제표 기반 종목 필터링</h2>
+                    <button onclick="updateFinancials()" id="btn-update-fin"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-sm transition-colors text-sm">
+                        재무제표 최신화
+                    </button>
+                </div>
+
+                <!-- Update Financials Progress -->
+                <div id="fin-progress-container"
+                    class="hidden mb-4 bg-gray-50 rounded-lg p-4 border border-gray-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700" id="fin-progress-text">초기화 중...</span>
+                        <span class="text-sm font-medium text-gray-700" id="fin-progress-pct">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                        <div id="fin-progress-bar"
+                            class="bg-green-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%">
+                        </div>
+                    </div>
+                </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">조건 검색식(AI 변환 / 직접 입력 모두 가능)</label>
                     <div class="flex flex-col md:flex-row gap-2">
@@ -481,19 +458,8 @@
         let chartInstance = null;
 
         // Configuration
-        function saveConfig() {
-            localStorage.setItem('dartKey', document.getElementById('dart-key').value);
-        }
-
-        window.onload = function () {
-            const dk = localStorage.getItem('dartKey');
-            if (dk) document.getElementById('dart-key').value = dk;
-        }
-
         function getKeys() {
-            // 입력란이 비어 있으면 서버에 영구 설정된 DART 키(.env)로 폴백한다.
-            const dk = document.getElementById('dart-key').value.trim();
-            return { dart: dk };
+            return {};
         }
 
         async function updateFinancials() {
@@ -516,7 +482,7 @@
                 const res = await fetch('/update_financials', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dart_api_key: keys.dart })
+                    body: JSON.stringify({})
                 });
 
                 if (!res.ok) {
@@ -892,8 +858,7 @@
                         period_months: period,
                         mc_period_str: mcPeriod,
                         portfolio_strategy: portfolioStrategy,
-                        use_tax_fee: useTaxFee,
-                        dart_key: keys.dart
+                        use_tax_fee: useTaxFee
                     })
                 });
 

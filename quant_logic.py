@@ -16,6 +16,11 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
+try:  # 공용 시세 레이어(pykrx/yfinance) — 없으면 기존 네이버 크롤만 사용
+    import arcmarket
+except ImportError:
+    arcmarket = None
+
 logger = logging.getLogger(__name__)
 
 # 외부 HTTP 호출 기본 타임아웃(초). 응답이 없을 때 백테스트 스레드가
@@ -289,7 +294,37 @@ class DBManager:
 
 class CrawlerUtil:
     @staticmethod
+    def _arcmarket_daily(code, years, stop_date):
+        """arcmarket(pykrx/yfinance) 일봉 → 레거시 규격(Date/Open/High/Low/Close/Volume, 오름차순).
+        실패·미가용이면 None → 호출측이 네이버 크롤 폴백."""
+        if arcmarket is None:
+            return None
+        try:
+            df = arcmarket.kr_daily(code, days=int(years * 365))
+        except Exception:
+            return None
+        if df is None or df.empty:
+            return None
+        out = df.reset_index().rename(columns={
+            "date": "Date", "open": "Open", "high": "High",
+            "low": "Low", "close": "Close", "volume": "Volume"})
+        for c in ("Open", "High", "Low", "Close", "Volume"):
+            out[c] = out[c].fillna(0).astype(int)
+        if stop_date is not None:
+            out = out[out["Date"] > pd.to_datetime(stop_date)]
+        return out.sort_values("Date").reset_index(drop=True)
+
+    @staticmethod
     def fetch_kospi_index(years=10):
+        if arcmarket is not None:
+            try:
+                df = arcmarket.kr_index_daily("KOSPI", days=int(years * 365))
+                if df is not None and not df.empty:
+                    out = df.rename(columns={"close": "Close"})[["Close"]]
+                    out.index.name = "Date"
+                    return out
+            except Exception:
+                pass
         result = []
         max_pages = int(years * 26) + 10 
         if max_pages < 20: max_pages = 20
@@ -325,6 +360,9 @@ class CrawlerUtil:
 
     @staticmethod
     def fetch_naver_stock_html(code, years=10, stop_date=None):
+        via = CrawlerUtil._arcmarket_daily(code, years, stop_date)
+        if via is not None and not via.empty:
+            return via
         result = []
         max_pages = int(years * 26) + 10 
         target_date_limit = datetime.today() - timedelta(days=years*365)
