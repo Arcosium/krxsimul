@@ -5,57 +5,241 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KRX Quant Simulator Web (v1.2.2)</title>
-    <!-- Tailwind CSS for styling -->
+    <!-- Tailwind CSS for layout utilities (flex/grid/spacing only — look is themed below) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js for rendering graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <style>
+        /* ============================================================
+           KRX QUANT SIMULATOR — 종이/잉크 원장(Ledger) 테마
+           단일 액센트(장부 적색), 카드/필배지/그라데이션 없음, 괘선으로 구획.
+           ============================================================ */
+        :root {
+            --paper: #F5F1E8;
+            --paper-dim: #EDE8DB;
+            --ink: #1C1914;
+            --ink-soft: #4A443A;
+            --ink-faint: #6E675A;
+            --rule: rgba(28, 25, 20, 0.8);
+            --hairline: rgba(28, 25, 20, 0.18);
+            --hairline-soft: rgba(28, 25, 20, 0.1);
+            --red: #A63A22;
+            --red-deep: #8C2F1A;
+            --red-soft: #F0E2E0;
+            --ok: #3F6B45;
+            --serif: 'Noto Serif KR', 'Apple SD Gothic Neo', serif;
+            --sans: 'Noto Sans KR', sans-serif;
+            --mono: 'IBM Plex Mono', ui-monospace, monospace;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
-            font-family: 'Inter', 'Pretendard', sans-serif;
-            background-color: #f3f4f6;
+            font-family: var(--sans);
+            background-color: var(--paper);
+            color: var(--ink);
+            font-size: 16px;
+            line-height: 1.7;
+            word-break: keep-all;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .tab-btn.active {
-            border-bottom: 2px solid #2563eb;
-            color: #2563eb;
-            font-weight: 600;
+        ::selection { background: rgba(166, 58, 34, 0.22); }
+
+        :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+
+        .muted { color: var(--ink-faint); }
+        .soft { color: var(--ink-soft); }
+        .mono-field { font-family: var(--mono) !important; }
+
+        /* ===== 마스트헤드 ===== */
+        .masthead { padding-bottom: 22px; }
+        .masthead h1 {
+            font-family: var(--serif); font-weight: 900;
+            font-size: clamp(1.5rem, 3.2vw, 2.15rem);
+            letter-spacing: .03em; text-transform: uppercase; margin: 0;
+        }
+        .masthead .tagline {
+            font-family: var(--mono); font-size: .72rem; letter-spacing: .1em;
+            color: var(--ink-faint); margin: 8px 0 0;
+        }
+        .masthead .meta {
+            font-family: var(--mono); font-size: .68rem; letter-spacing: .06em;
+            color: var(--ink-faint); line-height: 1.9; text-align: right;
+        }
+        .double-rule {
+            border: 0; border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule);
+            height: 3px; margin: 0 0 26px;
         }
 
-        .tab-content {
-            display: none;
+        .manual-link {
+            font-family: var(--mono); font-size: .72rem; letter-spacing: .04em;
+            text-transform: none; font-weight: 400; color: var(--ink-soft);
+            border: 1px solid var(--hairline); padding: 6px 12px; text-decoration: none;
+            transition: color .15s ease, border-color .15s ease;
         }
+        .manual-link:hover { color: var(--red); border-color: var(--red); }
 
-        .tab-content.active {
-            display: block;
+        /* ===== 탭 내비 ===== */
+        .tabnav { border-bottom: 1px solid var(--rule); }
+        .tab-btn {
+            font-family: var(--mono); font-size: .78rem; letter-spacing: .04em;
+            color: var(--ink-faint); background: none; border: 0; border-bottom: 3px solid transparent;
+            padding: 14px 18px; margin-bottom: -1px; cursor: pointer;
+            transition: color .15s ease, border-color .15s ease;
         }
+        .tab-btn:hover { color: var(--ink); }
+        .tab-btn.active { color: var(--ink); border-bottom: 3px solid var(--red); font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
+        /* ===== 시트(종이 단일면, 카드 아님) ===== */
+        .sheet { border: 1px solid var(--hairline); padding: 26px 28px; }
+        .sheet.compact { padding: 16px 18px; }
+        .sheet-head {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+            gap: 12px; border-bottom: 1px solid var(--rule); padding-bottom: 12px; margin-bottom: 20px;
+        }
+        .sheet-head h2 { font-family: var(--serif); font-weight: 900; font-size: 1.05rem; margin: 0; }
+        .sec-rule {
+            font-family: var(--serif); font-weight: 900; font-size: 1.05rem;
+            margin: 0 0 20px; padding-bottom: 12px; border-bottom: 1px solid var(--rule);
+        }
+        .sec-rule.small { font-size: .85rem; margin-bottom: 16px; padding-bottom: 8px; font-weight: 700; }
+        .field-row { border-bottom: 1px solid var(--hairline); padding-bottom: 24px; margin-bottom: 24px; }
+
+        .microlabel {
+            display: block; font-family: var(--mono); font-size: .72rem; letter-spacing: .16em;
+            text-transform: uppercase; color: var(--ink-faint); font-weight: 600; margin-bottom: 8px;
+        }
+        .check-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: .9rem; color: var(--ink-soft); }
+
+        /* ===== 입력 ===== */
+        textarea, input[type=text], select {
+            width: 100%; background: transparent; color: var(--ink); border: 0;
+            border-bottom: 1px solid var(--ink-soft); font-family: var(--sans);
+            font-size: .95rem; padding: 10px 2px; border-radius: 0;
+        }
+        textarea:focus, input[type=text]:focus, select:focus {
+            outline: 0; border-bottom-color: var(--red); box-shadow: 0 1px 0 0 var(--red);
+        }
+        textarea::placeholder, input::placeholder { color: var(--ink-faint); }
+        input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--red); border-radius: 0; cursor: pointer; }
+
+        /* ===== 버튼 ===== */
+        .btn {
+            font-family: var(--mono); font-size: .78rem; letter-spacing: .04em;
+            min-height: 44px; padding: 11px 22px; cursor: pointer; border-radius: 0;
+            transition: background .18s ease, color .18s ease, border-color .18s ease; white-space: nowrap;
+        }
+        .btn-primary { background: var(--ink); color: var(--paper); border: 1px solid var(--ink); font-weight: 600; }
+        .btn-primary:hover { background: var(--red); border-color: var(--red); }
+        .btn-primary:disabled { opacity: .5; cursor: wait; }
+        .btn-lg { font-size: .85rem; padding: 16px 32px; }
+        .btn-ghost { background: transparent; color: var(--red); border: 1px solid var(--red); }
+        .btn-ghost:hover { background: var(--red); color: var(--paper); }
+        .btn-danger-solid { background: var(--red-deep); color: var(--paper); border: 1px solid var(--red-deep); }
+        .btn-danger-solid:hover { background: var(--ink); border-color: var(--ink); }
+        .btn-sm { font-size: .7rem; padding: 8px 14px; min-height: 36px; }
+        .link-btn {
+            background: none; border: 0; font-family: var(--mono); font-size: .72rem; letter-spacing: .04em;
+            color: var(--ink-soft); cursor: pointer; border-bottom: 1px solid var(--hairline); padding: 4px 2px;
+        }
+        .link-btn:hover { color: var(--red); border-color: var(--red); }
+
+        /* ===== 상태 마커 ===== */
+        .mark { display: inline-block; width: 7px; height: 7px; flex-shrink: 0; }
+        .mark.buy { background: var(--red); }
+        .mark.sell { background: var(--ink-soft); }
+
+        /* ===== 원장 테이블 ===== */
+        .ledger-table { width: 100%; border-collapse: collapse; }
+        .ledger-table th {
+            font-family: var(--mono); font-size: .66rem; letter-spacing: .14em; text-transform: uppercase;
+            color: var(--ink-faint); text-align: left; font-weight: 600; padding: 10px 12px;
+            border-bottom: 1px solid var(--rule);
+        }
+        .ledger-table td { padding: 12px; border-bottom: 1px solid var(--hairline); font-size: .9rem; vertical-align: middle; }
+        .ledger-table tbody tr:hover { background: var(--paper-dim); }
+
+        /* ===== 진행바 ===== */
+        .progress-track { width: 100%; height: 4px; background: var(--hairline); }
+        .progress-fill { height: 100%; background: var(--red); transition: width .3s ease; }
+
+        /* ===== 로딩 스피너 ===== */
         .loading-spinner {
-            border-top-color: #3498db;
-            animation: spinner 1.5s linear infinite;
+            border: 3px solid var(--hairline); border-top-color: var(--red); border-radius: 50%;
+            width: 32px; height: 32px; animation: spinner 1.1s linear infinite;
+        }
+        .loading-spinner.lg { width: 40px; height: 40px; border-width: 4px; }
+        @keyframes spinner { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+            .loading-spinner { animation: none; }
+            * { transition-duration: .01ms !important; }
         }
 
-        @keyframes spinner {
-            0% {
-                transform: rotate(0deg);
-            }
+        /* ===== 인셋/로그/에러 박스 ===== */
+        .inset-box { border: 1px solid var(--hairline); padding: 18px 20px; }
+        .log-box { background: var(--ink); color: #C9C2AC; font-family: var(--mono); font-size: .78rem; padding: 12px; overflow-y: auto; white-space: pre-wrap; }
+        .error-box { background: var(--red-soft); border-left: 3px solid var(--red-deep); padding: 20px 22px; color: var(--red-deep); }
+        .error-box h3 { font-family: var(--serif); font-weight: 700; color: var(--red-deep); margin: 0 0 8px; }
+        .error-inline { color: var(--red-deep); padding: 16px; }
 
-            100% {
-                transform: rotate(360deg);
-            }
+        /* ===== 통계 타일 ===== */
+        .stat-tile { border: 1px solid var(--hairline); border-top: 3px solid var(--ink-faint); padding: 16px; text-align: center; }
+        .stat-tile.acc-ok { border-top-color: var(--ok); }
+        .stat-tile.acc-red { border-top-color: var(--red); }
+        .stat-label {
+            font-family: var(--mono); font-size: .64rem; letter-spacing: .12em; text-transform: uppercase;
+            color: var(--ink-faint); display: block;
         }
+        .stat-value {
+            font-family: var(--mono); font-size: 1.25rem; font-weight: 600; color: var(--ink);
+            margin-top: 6px; display: block; font-variant-numeric: tabular-nums;
+        }
+        .stat-value.sm { font-size: 1rem; }
+
+        /* ===== 콜아웃(유일한 채움면 — AI 보고서 전용) ===== */
+        .callout { background: var(--red-soft); border-left: 3px solid var(--red); padding: 22px 26px; }
+        .callout-head {
+            font-family: var(--serif); font-weight: 700; font-size: 1rem; color: var(--red-deep);
+            border-bottom: 1px solid var(--hairline); padding-bottom: 10px; margin-bottom: 14px;
+        }
+
+        /* ===== 신호 리스트 ===== */
+        .sig-list { color: var(--ink-soft); font-size: .85rem; }
+        .sig-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--hairline-soft); }
+        .sig-row:last-child { border-bottom: 0; }
+
+        /* ===== 빈 상태 ===== */
+        .empty-note { padding: 44px 0; text-align: center; color: var(--ink-faint); }
+        .empty-note::before { content: "—"; display: block; font-size: 22px; color: var(--rule); margin-bottom: 8px; }
+        .empty-inline { padding: 16px 0; text-align: center; color: var(--ink-faint); font-style: italic; font-size: .85rem; }
+
+        /* ===== Memories ===== */
+        .mem-card { border: 1px solid var(--hairline); padding: 14px; display: flex; align-items: center; transition: background .15s ease; }
+        .mem-card:hover { background: var(--paper-dim); }
+        .mem-name { color: var(--ink); font-weight: 500; font-size: .85rem; }
+        .mem-meta { font-family: var(--mono); font-size: .7rem; color: var(--ink-faint); }
+
+        .result-note { color: var(--ok); font-weight: 600; }
     </style>
 </head>
 
-<body class="text-gray-800">
+<body>
 
     <div class="max-w-7xl mx-auto p-4 lg:p-8">
 
-        <header class="bg-white shadow-sm rounded-lg p-6 mb-6 flex justify-between items-center">
+        <header class="masthead flex flex-col md:flex-row md:justify-between md:items-end gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                <h1 class="flex items-center gap-3">
                     KRX Quant Simulator
-                    <a href="/manual" target="_blank"
-                        class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full font-normal transition-colors flex items-center gap-1">
+                    <a href="/manual" target="_blank" class="manual-link flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -63,29 +247,27 @@
                         사용설명서
                     </a>
                 </h1>
-                <p class="text-sm text-gray-500 mt-1">Web-based Backtesting Engine v1.3.0</p>
+                <p class="tagline">Web-based Backtesting Engine v1.3.0</p>
             </div>
-            <div class="text-right text-xs text-gray-400">
+            <div class="meta">
                 <p>Developed by 한양대학교 김현호</p>
                 <p>Contact hh09080@naver.com</p>
             </div>
         </header>
 
+        <hr class="double-rule">
+
         <!-- Navigation Tabs -->
-        <nav class="flex border-b border-gray-200 mb-6 font-medium text-gray-500 overflow-x-auto">
-            <button onclick="switchTab('fast')" id="btn-fast"
-                class="tab-btn active px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap">1. 빠른
+        <nav class="tabnav flex mb-8 overflow-x-auto">
+            <button onclick="switchTab('fast')" id="btn-fast" class="tab-btn active whitespace-nowrap">1. 빠른
                 백테스팅</button>
-            <button onclick="switchTab('filter')" id="btn-filter"
-                class="tab-btn px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap">2. 재무
+            <button onclick="switchTab('filter')" id="btn-filter" class="tab-btn whitespace-nowrap">2. 재무
                 필터링</button>
-            <button onclick="switchTab('backtest')" id="btn-backtest"
-                class="tab-btn px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap">3. 전략 설정 &
+            <button onclick="switchTab('backtest')" id="btn-backtest" class="tab-btn whitespace-nowrap">3. 전략 설정 &
                 시뮬레이션</button>
-            <button onclick="switchTab('results')" id="btn-results"
-                class="tab-btn px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap">4. 시뮬레이션 결과</button>
-            <button onclick="switchTab('memories')" id="btn-memories"
-                class="tab-btn px-6 py-3 hover:text-blue-600 transition-colors whitespace-nowrap flex items-center gap-2">
+            <button onclick="switchTab('results')" id="btn-results" class="tab-btn whitespace-nowrap">4. 시뮬레이션
+                결과</button>
+            <button onclick="switchTab('memories')" id="btn-memories" class="tab-btn whitespace-nowrap flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
@@ -96,109 +278,92 @@
         </nav>
 
         <!-- TAB 1: Fast Backtest -->
-        <section id="tab-fast" class="tab-content active transition-opacity duration-300">
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
-                <h2 class="text-lg font-bold mb-4 border-b pb-2">빠른 백테스팅 (AI 자연어 분석)</h2>
+        <section id="tab-fast" class="tab-content active">
+            <div class="sheet mb-6">
+                <h2 class="sec-rule">빠른 백테스팅 (AI 자연어 분석)</h2>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">백테스트 조건 자연어 입력</label>
-                    <textarea id="fast-query" rows="5"
-                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"
+                    <label class="microlabel">백테스트 조건 자연어 입력</label>
+                    <textarea id="fast-query" rows="5" class="w-full"
                         placeholder="예: 기간은 3년. ROE 10 이상인 종목 중에서, 5일선이 20일선을 돌파할 때 사서 이전보다 수익률이 10% 이상이면 팔아줘. 예측은 안함."></textarea>
                 </div>
 
                 <div class="text-center mt-4">
-                    <button onclick="runFastBacktest()" id="btn-run-fast"
-                        class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-md shadow-sm transition-colors">
-                        ✨ 바로 백테스팅 시작
+                    <button onclick="runFastBacktest()" id="btn-run-fast" class="btn btn-primary btn-lg">
+                        바로 백테스팅 시작
                     </button>
                 </div>
 
                 <!-- Fast Backtest Log Window -->
-                <div id="fast-logs" class="hidden mt-6 bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <h3 class="font-bold text-sm text-gray-700 mb-2">AI 해석 조건</h3>
-                    <ul id="fast-conditions" class="text-sm text-gray-600 space-y-1 list-disc pl-5">
+                <div id="fast-logs" class="hidden mt-6 inset-box">
+                    <h3 class="font-bold text-sm soft mb-2">AI 해석 조건</h3>
+                    <ul id="fast-conditions" class="text-sm soft space-y-1 list-disc pl-5">
                     </ul>
                 </div>
             </div>
         </section>
 
         <!-- TAB 1: Filter -->
-        <section id="tab-filter" class="tab-content transition-opacity duration-300">
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 border-b pb-2">
-                    <h2 class="text-lg font-bold">재무제표 기반 종목 필터링</h2>
-                    <button onclick="updateFinancials()" id="btn-update-fin"
-                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-sm transition-colors text-sm">
+        <section id="tab-filter" class="tab-content">
+            <div class="sheet mb-6">
+                <div class="sheet-head flex-col md:flex-row">
+                    <h2>재무제표 기반 종목 필터링</h2>
+                    <button onclick="updateFinancials()" id="btn-update-fin" class="btn btn-ghost btn-sm">
                         재무제표 최신화
                     </button>
                 </div>
 
                 <!-- Update Financials Progress -->
-                <div id="fin-progress-container"
-                    class="hidden mb-4 bg-gray-50 rounded-lg p-4 border border-gray-100">
+                <div id="fin-progress-container" class="hidden mb-4 inset-box">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-gray-700" id="fin-progress-text">초기화 중...</span>
-                        <span class="text-sm font-medium text-gray-700" id="fin-progress-pct">0%</span>
+                        <span class="text-sm font-medium soft" id="fin-progress-text">초기화 중...</span>
+                        <span class="text-sm font-medium soft" id="fin-progress-pct">0%</span>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                        <div id="fin-progress-bar"
-                            class="bg-green-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%">
-                        </div>
+                    <div class="progress-track mb-2">
+                        <div id="fin-progress-bar" class="progress-fill" style="width: 0%"></div>
                     </div>
                 </div>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">조건 검색식(AI 변환 / 직접 입력 모두 가능)</label>
+                    <label class="microlabel">조건 검색식(AI 변환 / 직접 입력 모두 가능)</label>
                     <div class="flex flex-col md:flex-row gap-2">
-                        <input type="text" id="filter-query"
-                            class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border"
+                        <input type="text" id="filter-query" class="flex-1 mono-field"
                             placeholder="예: PER 10 이하이고 ROE 10 이상인 종목 찾아줘 (또는 PER<10 AND ROE>=10 직접 입력)">
                         <button onclick="generateWithAI('filter', 'filter-query')"
-                            class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-medium py-3 px-4 rounded-md transition-colors shadow-sm flex items-center justify-center gap-1 border border-indigo-200">
-                            ✨ AI로 생성
+                            class="btn btn-ghost flex items-center justify-center gap-1">
+                            AI로 생성
                         </button>
-                        <button onclick="runFilter()"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition-colors shadow-sm">
+                        <button onclick="runFilter()" class="btn btn-primary">
                             필터링 실행
                         </button>
                     </div>
                 </div>
 
                 <!-- Filter Loading State -->
-                <div id="filter-loading" class="hidden py-8 text-center text-gray-500">
-                    <div
-                        class="inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mb-2">
-                    </div>
+                <div id="filter-loading" class="hidden py-8 text-center muted">
+                    <div class="loading-spinner mb-2"></div>
                     <p>필터링 진행 중...</p>
                 </div>
 
                 <!-- Filter Results -->
                 <div id="filter-results-container" class="hidden">
                     <div class="flex justify-between items-center mb-3 mt-6">
-                        <h3 class="font-medium text-green-700">검색 결과: <span id="filter-count" class="font-bold">0</span>
+                        <h3 class="result-note">검색 결과: <span id="filter-count" class="font-bold mono">0</span>
                             종목</h3>
-                        <button onclick="goToBacktest()"
-                            class="text-sm bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded font-medium transition-colors">선택
+                        <button onclick="goToBacktest()" class="btn btn-ghost btn-sm">선택
                             종목으로 백테스트 가기 →</button>
                     </div>
-                    <div class="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-300 bg-white">
-                            <thead class="bg-gray-50">
+                    <div class="overflow-x-auto">
+                        <table class="ledger-table min-w-full">
+                            <thead>
                                 <tr>
-                                    <th
-                                        class="py-3 px-4 w-12 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th class="py-3 px-4 w-12 text-center">
                                         <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll()"
-                                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                             checked>
                                     </th>
-                                    <th
-                                        class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        종목코드</th>
-                                    <th
-                                        class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        기업명</th>
+                                    <th class="py-3 px-4 text-left">종목코드</th>
+                                    <th class="py-3 px-4 text-left">기업명</th>
                                 </tr>
                             </thead>
-                            <tbody id="filter-table-body" class="divide-y divide-gray-200 bg-white">
+                            <tbody id="filter-table-body">
                                 <!-- Rows inserted here -->
                             </tbody>
                         </table>
@@ -208,39 +373,34 @@
         </section>
 
         <!-- TAB 2: Backtest Setup -->
-        <section id="tab-backtest" class="tab-content transition-opacity duration-300">
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
-                <h2 class="text-lg font-bold mb-4 border-b pb-2">전략 설정 (매수/매도 로직)</h2>
+        <section id="tab-backtest" class="tab-content">
+            <div class="sheet mb-6">
+                <h2 class="sec-rule">전략 설정 (매수/매도 로직)</h2>
                 <div class="grid grid-cols-1 gap-6 mb-6">
                     <div>
                         <div class="flex justify-between items-center mb-2">
-                            <label class="block text-sm font-medium text-red-600">매수 로직 (Buy Logic)</label>
-                            <button onclick="generateWithAI('buy', 'buy-logic')"
-                                class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-medium py-1 px-3 rounded-full transition-colors flex items-center gap-1 border border-indigo-200">✨
+                            <label class="microlabel flex items-center gap-2"><span class="mark buy"></span>매수 로직 (Buy Logic)</label>
+                            <button onclick="generateWithAI('buy', 'buy-logic')" class="btn btn-ghost btn-sm">
                                 AI 변환</button>
                         </div>
-                        <textarea id="buy-logic" rows="2"
-                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 p-3 border font-mono text-sm"
+                        <textarea id="buy-logic" rows="2" class="w-full mono-field text-sm"
                             placeholder="예: 5일선이 20일선을 돌파하고 RSI가 30 이하일 때 매수해줘"></textarea>
                     </div>
                     <div>
                         <div class="flex justify-between items-center mb-2">
-                            <label class="block text-sm font-medium text-blue-600">매도 로직 (Sell Logic)</label>
-                            <button onclick="generateWithAI('sell', 'sell-logic')"
-                                class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-medium py-1 px-3 rounded-full transition-colors flex items-center gap-1 border border-indigo-200">✨
+                            <label class="microlabel flex items-center gap-2"><span class="mark sell"></span>매도 로직 (Sell Logic)</label>
+                            <button onclick="generateWithAI('sell', 'sell-logic')" class="btn btn-ghost btn-sm">
                                 AI 변환</button>
                         </div>
-                        <textarea id="sell-logic" rows="2"
-                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border font-mono text-sm"
+                        <textarea id="sell-logic" rows="2" class="w-full mono-field text-sm"
                             placeholder="예: 5일선이 20일선을 데드크로스 하거나 이전보다 수익률이 10% 이상이면 팔아줘"></textarea>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 pb-6 border-b border-gray-100">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 field-row">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">백테스팅 기간</label>
-                        <select id="period-months"
-                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border bg-gray-50">
+                        <label class="microlabel">백테스팅 기간</label>
+                        <select id="period-months" class="w-full">
                             <option value="3">3개월</option>
                             <option value="6">6개월</option>
                             <option value="12" selected>1년</option>
@@ -250,9 +410,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">몬테카를로 미래 예측 시뮬레이션</label>
-                        <select id="mc-period"
-                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border bg-gray-50">
+                        <label class="microlabel">몬테카를로 미래 예측 시뮬레이션</label>
+                        <select id="mc-period" class="w-full">
                             <option value="안함" selected>사용 안 함</option>
                             <option value="1개월">향후 1개월</option>
                             <option value="3개월">향후 3개월</option>
@@ -262,11 +421,10 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 pb-6 border-b border-gray-100 mt-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 field-row mt-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">포트폴리오 배분 전략</label>
-                        <select id="portfolio-strategy"
-                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 border bg-gray-50">
+                        <label class="microlabel">포트폴리오 배분 전략</label>
+                        <select id="portfolio-strategy" class="w-full">
                             <option value="equal_weight" selected>균등 배분 (Equal Weight)</option>
                             <option value="inverse_volatility">역변동성 배분 (Inverse Volatility)</option>
                             <option value="kelly_criterion">켈리 베팅 (Kelly Criterion)</option>
@@ -280,80 +438,74 @@
                         </select>
                     </div>
                     <div class="flex items-center mt-6">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="use-tax-fee"
-                                class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <span class="text-sm font-medium text-gray-700">거래 비용 반영 및 세금 정확도 개선</span>
+                        <label class="check-label">
+                            <input type="checkbox" id="use-tax-fee">
+                            <span class="text-sm">거래 비용 반영 및 세금 정확도 개선</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="text-center mt-6">
-                    <button onclick="runBacktest()"
-                        class="w-full md:w-auto px-10 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md transition-all transform hover:scale-105">
+                    <button onclick="runBacktest()" class="btn btn-primary btn-lg w-full md:w-auto">
                         시뮬레이션 시작 (Run Backtest)
                     </button>
                 </div>
 
                 <!-- Progress / Loading -->
-                <div id="bt-loading" class="hidden mt-8 bg-gray-50 rounded-lg p-6 border border-gray-100">
+                <div id="bt-loading" class="hidden mt-8 inset-box">
                     <div class="flex flex-col items-center justify-center text-center mb-4">
-                        <div
-                            class="inline-block w-10 h-10 border-4 border-gray-200 border-t-red-500 rounded-full animate-spin mb-3">
-                        </div>
-                        <h3 class="text-lg font-medium text-gray-800">전략 평가 및 시뮬레이션 중...</h3>
+                        <div class="loading-spinner lg mb-3"></div>
+                        <h3 class="text-lg font-medium">전략 평가 및 시뮬레이션 중...</h3>
                     </div>
 
-                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-                        <div id="bt-progress-bar" class="bg-red-600 h-2.5 rounded-full transition-all duration-300"
-                            style="width: 0%"></div>
+                    <div class="progress-track mb-4">
+                        <div id="bt-progress-bar" class="progress-fill" style="width: 0%"></div>
                     </div>
 
-                    <div id="bt-logs"
-                        class="bg-black text-green-400 font-mono text-sm p-3 rounded h-40 overflow-y-auto whitespace-pre-wrap flex flex-col gap-1">
+                    <div id="bt-logs" class="log-box h-40 overflow-y-auto flex flex-col gap-1">
                         <!-- Logs appended here -->
                     </div>
                 </div>
 
                 <!-- Error Modal -->
-                <div id="bt-error-modal" class="hidden mt-8 bg-red-50 rounded-lg p-6 border border-red-200">
-                    <h3 class="text-lg font-bold text-red-700 mb-2">백테스트 오류 발생</h3>
-                    <p id="bt-error-text" class="text-sm text-red-600 whitespace-pre-wrap"></p>
+                <div id="bt-error-modal" class="hidden mt-8 error-box">
+                    <h3 class="text-lg">백테스트 오류 발생</h3>
+                    <p id="bt-error-text" class="text-sm whitespace-pre-wrap"></p>
                 </div>
             </div>
         </section>
 
         <!-- TAB 3: Results -->
-        <section id="tab-results" class="tab-content transition-opacity duration-300">
+        <section id="tab-results" class="tab-content">
 
             <!-- Dashboard Stats -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                <div class="bg-white rounded-lg p-4 shadow-sm border-t-4 border-emerald-500 text-center">
-                    <p class="text-xs text-gray-500 font-medium uppercase">Total Return</p>
-                    <p id="res-return" class="text-xl font-bold text-gray-900 mt-1">-</p>
+                <div class="stat-tile acc-ok">
+                    <p class="stat-label">Total Return</p>
+                    <p id="res-return" class="stat-value">-</p>
                 </div>
-                <div class="bg-white rounded-lg p-4 shadow-sm border-t-4 border-emerald-400 text-center">
-                    <p class="text-xs text-gray-500 font-medium uppercase">CAGR</p>
-                    <p id="res-cagr" class="text-xl font-bold text-gray-900 mt-1">-</p>
+                <div class="stat-tile acc-ok">
+                    <p class="stat-label">CAGR</p>
+                    <p id="res-cagr" class="stat-value">-</p>
                 </div>
-                <div class="bg-white rounded-lg p-4 shadow-sm border-t-4 border-red-400 text-center">
-                    <p class="text-xs text-gray-500 font-medium uppercase">MDD / 최대 낙폭</p>
-                    <p id="res-mdd" class="text-xl font-bold text-gray-900 mt-1">-</p>
+                <div class="stat-tile acc-red">
+                    <p class="stat-label">MDD / 최대 낙폭</p>
+                    <p id="res-mdd" class="stat-value">-</p>
                 </div>
-                <div class="bg-white rounded-lg p-4 shadow-sm border-t-4 border-blue-400 text-center">
-                    <p class="text-xs text-gray-500 font-medium uppercase">Sharpe Ratio</p>
-                    <p id="res-sharpe" class="text-xl font-bold text-gray-900 mt-1">-</p>
+                <div class="stat-tile">
+                    <p class="stat-label">Sharpe Ratio</p>
+                    <p id="res-sharpe" class="stat-value">-</p>
                 </div>
-                <div class="bg-white rounded-lg p-4 shadow-sm border-t-4 border-purple-400 text-center">
-                    <p class="text-xs text-gray-500 font-medium uppercase">승률 (Win Rate)</p>
-                    <p id="res-winrate" class="text-sm font-bold text-gray-900 mt-1">-</p>
+                <div class="stat-tile">
+                    <p class="stat-label">승률 (Win Rate)</p>
+                    <p id="res-winrate" class="stat-value sm">-</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Main Chart -->
-                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">수익률 추이 (Cumulative Return)</h3>
+                <div class="lg:col-span-2 sheet">
+                    <h3 class="sec-rule small">수익률 추이 (Cumulative Return)</h3>
                     <div class="relative h-80 w-full">
                         <canvas id="returnChart"></canvas>
                     </div>
@@ -361,27 +513,25 @@
 
                 <div class="flex flex-col gap-6">
                     <!-- Recent Buy Signals -->
-                    <div class="bg-white p-4 rounded-lg shadow-sm flex-1">
-                        <h3 class="font-bold text-red-600 mb-3 text-sm border-b pb-1">최근 매수 신호 포착</h3>
-                        <div id="buy-signals-list"
-                            class="text-sm text-gray-600 max-h-40 overflow-y-auto pr-2 space-y-2">
-                            <p class="text-gray-400 italic text-center py-4">신호 없음</p>
+                    <div class="sheet compact flex-1">
+                        <h3 class="sec-rule small flex items-center gap-2"><span class="mark buy"></span>최근 매수 신호 포착</h3>
+                        <div id="buy-signals-list" class="sig-list max-h-40 overflow-y-auto pr-2 space-y-2">
+                            <p class="empty-inline">신호 없음</p>
                         </div>
                     </div>
                     <!-- Recent Sell Signals -->
-                    <div class="bg-white p-4 rounded-lg shadow-sm flex-1">
-                        <h3 class="font-bold text-blue-600 mb-3 text-sm border-b pb-1">최근 매도 신호 포착</h3>
-                        <div id="sell-signals-list"
-                            class="text-sm text-gray-600 max-h-40 overflow-y-auto pr-2 space-y-2">
-                            <p class="text-gray-400 italic text-center py-4">신호 없음</p>
+                    <div class="sheet compact flex-1">
+                        <h3 class="sec-rule small flex items-center gap-2"><span class="mark sell"></span>최근 매도 신호 포착</h3>
+                        <div id="sell-signals-list" class="sig-list max-h-40 overflow-y-auto pr-2 space-y-2">
+                            <p class="empty-inline">신호 없음</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- AI Report Section -->
-            <div class="lg:col-span-3 bg-indigo-50 border border-indigo-100 p-6 rounded-lg shadow-sm mt-6 mb-6">
-                <h3 class="font-bold text-indigo-800 mb-3 flex items-center gap-2 border-b border-indigo-200 pb-2">
+            <div class="lg:col-span-3 callout mt-6 mb-6">
+                <h3 class="callout-head flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 10V3L4 14h7v7l9-11h-7z">
@@ -389,19 +539,18 @@
                     </svg>
                     AI 투자 요약 보고서
                 </h3>
-                <p id="res-ai-report" class="text-sm text-gray-700 leading-relaxed">백테스트를 실행하면 AI가
+                <p id="res-ai-report" class="text-sm leading-relaxed soft">백테스트를 실행하면 AI가
                     분석한 요약 보고서가 생성됩니다.</p>
             </div>
 
         </section>
 
         <!-- TAB 4: Memories -->
-        <section id="tab-memories" class="tab-content transition-opacity duration-300">
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
-                <div
-                    class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2 gap-4">
-                    <h2 class="text-lg font-bold flex items-center gap-2">
-                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <section id="tab-memories" class="tab-content">
+            <div class="sheet mb-6">
+                <div class="sheet-head flex-col md:flex-row items-start md:items-center">
+                    <h2 class="flex items-center gap-2">
+                        <svg class="w-5 h-5 muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
                             </path>
@@ -409,21 +558,17 @@
                         Memories 보관함
                     </h2>
                     <div class="flex flex-wrap items-center gap-2">
-                        <label class="flex items-center gap-1 text-sm text-gray-700 mr-2 cursor-pointer">
-                            <input type="checkbox" id="memoriesSelectAll" onclick="toggleMemoriesSelectAll()"
-                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                        <label class="check-label mr-2">
+                            <input type="checkbox" id="memoriesSelectAll" onclick="toggleMemoriesSelectAll()">
                             전체 선택
                         </label>
-                        <button onclick="deleteSelectedMemories()"
-                            class="text-sm bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded transition-colors border border-red-200">
+                        <button onclick="deleteSelectedMemories()" class="btn btn-ghost btn-sm">
                             선택 삭제
                         </button>
-                        <button onclick="deleteAllMemories()"
-                            class="text-sm bg-red-600 text-white hover:bg-red-700 px-3 py-1.5 rounded transition-colors">
+                        <button onclick="deleteAllMemories()" class="btn btn-danger-solid btn-sm">
                             전체 삭제
                         </button>
-                        <button onclick="fetchMemories()"
-                            class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 ml-2">
+                        <button onclick="fetchMemories()" class="link-btn flex items-center gap-1 ml-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
@@ -434,13 +579,11 @@
                     </div>
                 </div>
 
-                <p class="text-sm text-gray-500 mb-6">백테스트 결과 엑셀 파일, 텍스트 보고서 등이 위치한 폴더입니다. 필요 없는 파일은 선택하여 삭제할 수 있습니다.
+                <p class="text-sm mb-6 muted">백테스트 결과 엑셀 파일, 텍스트 보고서 등이 위치한 폴더입니다. 필요 없는 파일은 선택하여 삭제할 수 있습니다.
                 </p>
 
-                <div id="memories-loading" class="hidden py-10 text-center text-gray-500">
-                    <div
-                        class="inline-block w-8 h-8 border-4 border-gray-200 border-t-gray-500 rounded-full animate-spin mb-2">
-                    </div>
+                <div id="memories-loading" class="hidden py-10 text-center muted">
+                    <div class="loading-spinner mb-2"></div>
                     <p>파일 목록을 불러오는 중...</p>
                 </div>
 
@@ -777,10 +920,10 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                 <td class="py-3 px-4 text-center">
-                    <input type="checkbox" class="stock-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" value="${idx}" checked>
+                    <input type="checkbox" class="stock-checkbox" value="${idx}" checked>
                 </td>
-                <td class="py-3 px-4 whitespace-nowrap text-sm font-medium text-gray-900">${comp['종목코드']}</td>
-                <td class="py-3 px-4 whitespace-nowrap text-sm text-gray-500">${comp['기업명']}</td>
+                <td class="py-3 px-4 whitespace-nowrap text-sm font-medium">${comp['종목코드']}</td>
+                <td class="py-3 px-4 whitespace-nowrap text-sm muted">${comp['기업명']}</td>
             `;
                 tbody.appendChild(tr);
             });
@@ -914,31 +1057,31 @@
             buyContainer.innerHTML = '';
             if (data.recent_signals.buy.length > 0) {
                 data.recent_signals.buy.forEach(s => {
-                    buyContainer.innerHTML += `<div class="flex justify-between border-b border-gray-100 pb-1">
-                    <span><span class="font-medium text-gray-800">${s.name}</span> <span class="text-xs text-gray-400">(${s.code})</span></span>
+                    buyContainer.innerHTML += `<div class="sig-row">
+                    <span><span class="font-medium">${s.name}</span> <span class="text-xs muted">(${s.code})</span></span>
                     <span class="text-right">
                         <span class="block">${s.price.toLocaleString()} 원</span>
-                        <span class="block text-xs text-red-500">${s.date}</span>
+                        <span class="block text-xs muted">${s.date}</span>
                     </span>
                 </div>`;
                 });
             } else {
-                buyContainer.innerHTML = '<p class="text-gray-400 italic text-center py-4">최근 5일간 매수 신호 없음</p>';
+                buyContainer.innerHTML = '<p class="empty-inline">최근 5일간 매수 신호 없음</p>';
             }
 
             sellContainer.innerHTML = '';
             if (data.recent_signals.sell.length > 0) {
                 data.recent_signals.sell.forEach(s => {
-                    sellContainer.innerHTML += `<div class="flex justify-between border-b border-gray-100 pb-1">
-                    <span><span class="font-medium text-gray-800">${s.name}</span> <span class="text-xs text-gray-400">(${s.code})</span></span>
+                    sellContainer.innerHTML += `<div class="sig-row">
+                    <span><span class="font-medium">${s.name}</span> <span class="text-xs muted">(${s.code})</span></span>
                     <span class="text-right">
                         <span class="block">${s.price.toLocaleString()} 원</span>
-                        <span class="block text-xs text-blue-500">${s.date}</span>
+                        <span class="block text-xs muted">${s.date}</span>
                     </span>
                 </div>`;
                 });
             } else {
-                sellContainer.innerHTML = '<p class="text-gray-400 italic text-center py-4">최근 5일간 매도 신호 없음</p>';
+                sellContainer.innerHTML = '<p class="empty-inline">최근 5일간 매도 신호 없음</p>';
             }
         }
 
@@ -951,12 +1094,14 @@
             const bnhValues = retData.map(d => d.BnH);
             const kospiValues = retData.map(d => d.KOSPI || 0);
 
+            const monoFont = { family: "'IBM Plex Mono', monospace", size: 11 };
+
             let datasets = [
                 {
                     label: '내 전략 (Strategy)',
                     data: stratValues,
-                    borderColor: '#dc2626',
-                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    borderColor: '#A63A22',
+                    backgroundColor: 'rgba(166, 58, 34, .08)',
                     borderWidth: 2,
                     pointRadius: 0,
                     tension: 0.1,
@@ -965,7 +1110,7 @@
                 {
                     label: '기준 (Buy & Hold)',
                     data: bnhValues,
-                    borderColor: '#2563eb',
+                    borderColor: '#1C1914',
                     borderWidth: 1.5,
                     pointRadius: 0,
                     borderDash: [5, 5],
@@ -974,7 +1119,7 @@
                 {
                     label: 'KOSPI 지수',
                     data: kospiValues,
-                    borderColor: '#059669',
+                    borderColor: '#3F6B45',
                     borderWidth: 1.5,
                     pointRadius: 0,
                     borderDash: [2, 2],
@@ -1006,7 +1151,7 @@
                 datasets.push({
                     label: 'MC 예측 중앙값 (Forecast Median)',
                     data: getPaddedData(mcMedian),
-                    borderColor: '#d97706',
+                    borderColor: '#8C6D3B',
                     borderWidth: 2,
                     borderDash: [3, 3],
                     pointRadius: 0,
@@ -1017,7 +1162,7 @@
                 datasets.push({
                     label: '상단 95% (Forecast Upper)',
                     data: getPaddedData(mcUpper),
-                    borderColor: 'rgba(252, 211, 77, 0.5)',
+                    borderColor: 'rgba(110, 103, 90, .4)',
                     backgroundColor: 'transparent',
                     borderWidth: 1,
                     pointRadius: 0,
@@ -1026,7 +1171,7 @@
                 datasets.push({
                     label: '하단 5% (Forecast Lower)',
                     data: getPaddedData(mcLower),
-                    borderColor: 'rgba(252, 211, 77, 0.5)',
+                    borderColor: 'rgba(110, 103, 90, .4)',
                     backgroundColor: 'transparent',
                     borderWidth: 1,
                     pointRadius: 0,
@@ -1051,15 +1196,20 @@
                         tooltip: {
                             callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` }
                         },
-                        legend: { position: 'bottom' }
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#4A443A', font: monoFont, boxWidth: 12 }
+                        }
                     },
                     scales: {
                         y: {
-                            title: { display: true, text: "Return (%)" },
-                            grid: { color: "#f3f4f6" }
+                            title: { display: true, text: "Return (%)", color: '#6E675A', font: monoFont },
+                            grid: { color: 'rgba(28,25,20,.1)' },
+                            ticks: { color: '#6E675A', font: monoFont }
                         },
                         x: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: { color: '#6E675A', font: monoFont }
                         }
                     }
                 }
@@ -1081,13 +1231,13 @@
                 loader.classList.add('hidden');
 
                 if (data.error) {
-                    listDiv.innerHTML = `<p class="text-red-500 p-4 col-span-3">에러: ${data.error}</p>`;
+                    listDiv.innerHTML = `<p class="error-inline col-span-3">에러: ${data.error}</p>`;
                     return;
                 }
 
                 if (data.files.length === 0) {
-                    listDiv.innerHTML = `<div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-10 text-center col-span-3">
-                    <p class="text-gray-400 mb-2">저장된 파일이나 백테스트 결과가 없습니다.</p>
+                    listDiv.innerHTML = `<div class="empty-note col-span-3">
+                    <p>저장된 파일이나 백테스트 결과가 없습니다.</p>
                 </div>`;
                     return;
                 }
@@ -1095,25 +1245,25 @@
                 data.files.forEach(f => {
                     let iconSvg = '';
                     if (f.name.endsWith('.db') || f.name.endsWith('.sqlite')) {
-                        iconSvg = `<svg class="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" /><path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" /><path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" /></svg>`;
+                        iconSvg = `<svg class="w-8 h-8 muted" fill="currentColor" viewBox="0 0 20 20"><path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" /><path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" /><path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" /></svg>`;
                     } else if (f.name.endsWith('.xlsx') || f.name.endsWith('.csv')) {
-                        iconSvg = `<svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`;
+                        iconSvg = `<svg class="w-8 h-8 muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`;
                     } else {
-                        iconSvg = `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>`;
+                        iconSvg = `<svg class="w-8 h-8 muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>`;
                     }
 
                     listDiv.innerHTML += `
-                    <div class="border border-gray-200 bg-gray-50 rounded-lg p-4 flex items-center hover:bg-gray-100 transition-colors shadow-sm">
+                    <div class="mem-card">
                         <div class="flex items-center h-full mr-3 pl-1">
-                            <input type="checkbox" value="${f.name}" class="memory-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4" onclick="event.stopPropagation()">
+                            <input type="checkbox" value="${f.name}" class="memory-checkbox" onclick="event.stopPropagation()">
                         </div>
                         <div class="flex-1 flex items-center cursor-pointer overflow-hidden" onclick="downloadFile('${f.name}')">
                             <div class="mr-4">${iconSvg}</div>
                             <div class="flex-1 overflow-hidden">
-                                <h4 class="font-medium text-gray-800 truncate text-sm" title="${f.name}">${f.name}</h4>
-                                <p class="text-xs text-gray-400 mt-1">${f.size} • ${f.modified}</p>
+                                <h4 class="mem-name truncate" title="${f.name}">${f.name}</h4>
+                                <p class="mem-meta mt-1">${f.size} • ${f.modified}</p>
                             </div>
-                            <div class="text-blue-500 p-2 ml-2">
+                            <div class="muted p-2 ml-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             </div>
                         </div>
@@ -1124,7 +1274,7 @@
                 // Uncheck select all when freshly rendered
                 document.getElementById('memoriesSelectAll').checked = false;
             } catch (e) {
-                listDiv.innerHTML = `<p class="text-red-500 p-4 col-span-3">데이터 로딩 오류: ${e}</p>`;
+                listDiv.innerHTML = `<p class="error-inline col-span-3">데이터 로딩 오류: ${e}</p>`;
                 loader.classList.add('hidden');
             }
         }

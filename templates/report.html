@@ -3,78 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <title>백테스트 결과 보고서</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 20px; border: none; background: none; cursor: pointer; font-size: 16px; font-weight: bold; color: #7f8c8d; border-bottom: 3px solid transparent; }
-        .tab-btn.active { color: #3498db; border-bottom-color: #3498db; }
+        :root {
+            --paper: #F5F1E8;
+            --paper-dim: #EDE8DB;
+            --ink: #1C1914;
+            --ink-soft: #4A443A;
+            --ink-faint: #6E675A;
+            --rule: rgba(28, 25, 20, 0.8);
+            --hairline: rgba(28, 25, 20, 0.18);
+            --hairline-soft: rgba(28, 25, 20, 0.1);
+            --red: #A63A22;
+            --red-deep: #8C2F1A;
+            --red-soft: #F0E2E0;
+            --ok: #3F6B45;
+            --serif: 'Noto Serif KR', 'Apple SD Gothic Neo', serif;
+            --sans: 'Noto Sans KR', sans-serif;
+            --mono: 'IBM Plex Mono', ui-monospace, monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--sans);
+            line-height: 1.7;
+            color: var(--ink);
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 32px 24px 64px;
+            background-color: var(--paper);
+            word-break: keep-all;
+        }
+
+        ::selection { background: rgba(166, 58, 34, 0.22); }
+
+        h1 {
+            font-family: var(--serif);
+            font-weight: 900;
+            font-size: clamp(1.5rem, 3.4vw, 2rem);
+            letter-spacing: .02em;
+            color: var(--ink);
+            border-bottom: 1px solid var(--rule);
+            padding-bottom: 14px;
+            margin: 0 0 8px;
+        }
+
+        .meta-line { font-size: .92rem; color: var(--ink-soft); margin: 0 0 24px; }
+
+        .tabs { display: flex; border-bottom: 1px solid var(--rule); margin-bottom: 24px; }
+
+        .tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-family: var(--mono);
+            font-size: .8rem;
+            letter-spacing: .04em;
+            color: var(--ink-faint);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px;
+            transition: color .15s ease, border-color .15s ease;
+        }
+
+        .tab-btn.active { color: var(--ink); border-bottom-color: var(--red); font-weight: 600; }
+
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        th { background-color: #f8f9fa; color: #2c3e50; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .stat-card { background: #ecf0f1; padding: 15px; border-radius: 8px; text-align: center; }
-        .stat-label { font-size: 12px; color: #7f8c8d; display: block; }
-        .stat-value { font-size: 18px; font-weight: bold; color: #2980b9; }
-        .report-box { background: #fdf9f3; border-left: 5px solid #f39c12; padding: 20px; border-radius: 4px; font-style: italic; white-space: pre-wrap; }
-        .m-buy { color: #e74c3c; font-weight: bold; }
-        .m-sell { color: #3498db; font-weight: bold; }
-        .graph-img { width: 100%; border: 1px solid #ddd; border-radius: 8px; margin: 20px 0; }
+
+        th {
+            font-family: var(--mono);
+            font-size: .68rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--ink-faint);
+            text-align: left;
+            font-weight: 600;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--rule);
+        }
+
+        td { padding: 12px; border-bottom: 1px solid var(--hairline); font-size: .92rem; }
+
+        tbody tr:hover td { background: var(--paper-dim); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0;
+            margin-bottom: 28px;
+            border: 1px solid var(--hairline);
+        }
+
+        .stat-tile {
+            padding: 16px;
+            text-align: center;
+            border-right: 1px solid var(--hairline);
+            border-top: 3px solid var(--ink-faint);
+        }
+        .stat-tile:last-child { border-right: 0; }
+        .stat-tile.acc-ok { border-top-color: var(--ok); }
+        .stat-tile.acc-red { border-top-color: var(--red); }
+
+        .stat-label {
+            font-family: var(--mono);
+            font-size: .64rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--ink-faint);
+            display: block;
+        }
+
+        .stat-value {
+            font-family: var(--mono);
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-top: 6px;
+            display: block;
+            font-variant-numeric: tabular-nums;
+        }
+
+        h3 {
+            font-family: var(--serif);
+            font-weight: 700;
+            font-size: 1rem;
+            margin: 28px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--rule);
+        }
+
+        .callout {
+            background: var(--red-soft);
+            border-left: 3px solid var(--red);
+            padding: 20px 22px;
+            white-space: pre-wrap;
+            font-size: .95rem;
+            color: var(--ink-soft);
+        }
+
+        .m-buy { color: var(--red); font-weight: 600; }
+        .m-sell { color: var(--ink-soft); font-weight: 600; }
+
+        .graph-img {
+            width: 100%;
+            border: 1px solid var(--hairline);
+            margin: 16px 0 8px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📈 퀀트 시뮬레이션 결과 보고서</h1>
-        <p><strong>수집 조건:</strong> {{ query }} | <strong>매수:</strong> {{ buy_logic }} | <strong>매도:</strong> {{ sell_logic }}</p>
+    <h1>퀀트 시뮬레이션 결과 보고서</h1>
+    <p class="meta-line"><strong>수집 조건:</strong> {{ query }} | <strong>매수:</strong> {{ buy_logic }} | <strong>매도:</strong> {{ sell_logic }}</p>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('summary')">종합 요약</button>
-            <button class="tab-btn" onclick="showTab('trades')">상세 매매 기록</button>
-            <button class="tab-btn" onclick="showTab('raw_data')">수익률 추이</button>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('summary')">종합 요약</button>
+        <button class="tab-btn" onclick="showTab('trades')">상세 매매 기록</button>
+        <button class="tab-btn" onclick="showTab('raw_data')">수익률 추이</button>
+    </div>
+
+    <div id="summary" class="tab-content active">
+        <div class="stats-grid">
+            <div class="stat-tile acc-ok"><span class="stat-label">누적 수익률</span><span class="stat-value">{{ stats.get('Total Return', '0%') }}</span></div>
+            <div class="stat-tile"><span class="stat-label">B&H 수익률</span><span class="stat-value">{{ stats.get('BnH Return', '0%') }}</span></div>
+            <div class="stat-tile"><span class="stat-label">KOSPI 수익률</span><span class="stat-value">{{ stats.get('KOSPI Return', '0%') }}</span></div>
+            <div class="stat-tile acc-ok"><span class="stat-label">CAGR</span><span class="stat-value">{{ stats.get('CAGR', '0%') }}</span></div>
+            <div class="stat-tile acc-red"><span class="stat-label">MDD</span><span class="stat-value">{{ stats.get('MDD', '0%') }}</span></div>
+            <div class="stat-tile"><span class="stat-label">샤프 지수</span><span class="stat-value">{{ stats.get('Sharpe', '0') }}</span></div>
         </div>
 
-        <div id="summary" class="tab-content active">
-            <div class="stats-grid">
-                <div class="stat-card"><span class="stat-label">누적 수익률</span><span class="stat-value">{{ stats.get('Total Return', '0%') }}</span></div>
-                <div class="stat-card"><span class="stat-label">B&H 수익률</span><span class="stat-value">{{ stats.get('BnH Return', '0%') }}</span></div>
-                <div class="stat-card"><span class="stat-label">KOSPI 수익률</span><span class="stat-value">{{ stats.get('KOSPI Return', '0%') }}</span></div>
-                <div class="stat-card"><span class="stat-label">CAGR</span><span class="stat-value">{{ stats.get('CAGR', '0%') }}</span></div>
-                <div class="stat-card"><span class="stat-label">MDD</span><span class="stat-value">{{ stats.get('MDD', '0%') }}</span></div>
-                <div class="stat-card"><span class="stat-label">샤프 지수</span><span class="stat-value">{{ stats.get('Sharpe', '0') }}</span></div>
-            </div>
+        {% if graph_base64 %}<h3>성과 그래프</h3><img src="data:image/png;base64,{{ graph_base64 }}" class="graph-img">{% endif %}
 
-            {% if graph_base64 %}<h3>📊 성과 그래프</h3><img src="data:image/png;base64,{{ graph_base64 }}" class="graph-img">{% endif %}
+        <h3>AI 투자 전략 분석</h3>
+        <div class="callout">{{ ai_report }}</div>
+    </div>
 
-            <h3>🤖 AI 투자 전략 분석</h3>
-            <div class="report-box">{{ ai_report }}</div>
-        </div>
+    <div id="trades" class="tab-content">
+        <h3>매매 히스토리</h3>
+        <table>
+            <thead>
+                <tr><th>날짜</th><th>구분</th><th>종목명</th><th>가격</th><th>수량</th><th>수익률</th></tr>
+            </thead>
+            <tbody>
+                {% for t in trades %}<tr><td>{{ t['date'] }}</td><td class="{% if '매수' in t['type'] or '매입' in t['type'] %}m-buy{% else %}m-sell{% endif %}">{{ t['type'] }}</td><td>{{ t['name'] }}</td><td>{{ '{:,}'.format(t['price']) }}원</td><td>{{ t['qty'] }}</td><td>{{ t.get('return', '-') }}</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-        <div id="trades" class="tab-content">
-            <h3>📃 매매 히스토리</h3>
-            <table>
-                <thead>
-                    <tr><th>날짜</th><th>구분</th><th>종목명</th><th>가격</th><th>수량</th><th>수익률</th></tr>
-                </thead>
-                <tbody>
-                    {% for t in trades %}<tr><td>{{ t['date'] }}</td><td class="{% if '매수' in t['type'] or '매입' in t['type'] %}m-buy{% else %}m-sell{% endif %}">{{ t['type'] }}</td><td>{{ t['name'] }}</td><td>{{ '{:,}'.format(t['price']) }}원</td><td>{{ t['qty'] }}</td><td>{{ t.get('return', '-') }}</td></tr>{% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div id="raw_data" class="tab-content">
-            <h3>📊 일별 누적 수익률 (%)</h3>
-            <table>
-                <thead>
-                    <tr><th>날짜</th><th>전략</th><th>B&H</th><th>KOSPI</th></tr>
-                </thead>
-                <tbody>
-                    {% for r in returns %}<tr><td>{{ r['Date'] }}</td><td>{{ '%.2f'|format(r['Strategy']) }}%</td><td>{{ '%.2f'|format(r['BnH']) }}%</td><td>{{ '%.2f'|format(r.get('KOSPI', 0)) }}%</td></tr>{% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div id="raw_data" class="tab-content">
+        <h3>일별 누적 수익률 (%)</h3>
+        <table>
+            <thead>
+                <tr><th>날짜</th><th>전략</th><th>B&H</th><th>KOSPI</th></tr>
+            </thead>
+            <tbody>
+                {% for r in returns %}<tr><td>{{ r['Date'] }}</td><td>{{ '%.2f'|format(r['Strategy']) }}%</td><td>{{ '%.2f'|format(r['BnH']) }}%</td><td>{{ '%.2f'|format(r.get('KOSPI', 0)) }}%</td></tr>{% endfor %}
+            </tbody>
+        </table>
     </div>
 
     <script>
